@@ -58,7 +58,7 @@ export default async function handler(req, res) {
       system: system || 'You are a helpful assistant.',
       messages: [{ role: 'user', content: user }],
     };
-    if (useSearch) body.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 8 }];
+    if (useSearch) body.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }];
 
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
