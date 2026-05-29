@@ -58,7 +58,7 @@ export default async function handler(req, res) {
       system: system || 'You are a helpful assistant.',
       messages: [{ role: 'user', content: user }],
     };
-    if (useSearch) body.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }];
+    if (useSearch) body.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }];
 
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -72,7 +72,12 @@ export default async function handler(req, res) {
 
     const raw = await upstream.text();
     if (!upstream.ok) {
-      return res.status(upstream.status).json({ error: 'Anthropic API returned ' + upstream.status, details: raw.slice(0, 600) });
+      const retryAfter = upstream.headers.get('retry-after');
+      return res.status(upstream.status).json({
+        error: 'Anthropic API returned ' + upstream.status,
+        details: raw.slice(0, 600),
+        retryAfter: retryAfter ? parseInt(retryAfter, 10) : null,
+      });
     }
 
     let data;
