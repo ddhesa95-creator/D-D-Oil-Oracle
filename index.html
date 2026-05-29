@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#050608" />
+<title>Oil Oracle — Real-Time Intelligence</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='20' font-size='22'%3E🛢️%3C/text%3E%3C/svg%3E" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { background: #050608; color: #d4d8dc; font-family: 'JetBrains Mono', 'Courier New', monospace; min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at top, rgba(255,80,30,0.08), transparent 60%), radial-gradient(ellipse at bottom right, rgba(20,100,200,0.06), transparent 60%); }
+  body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2; background: repeating-linear-gradient(transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 3px); }
+  .app { position: relative; z-index: 10; max-width: 1280px; margin: 0 auto; padding: 24px 16px 60px; }
+  .setup { padding: 30px 20px; }
+  .setup h1 { font-size: clamp(28px, 6vw, 48px); font-weight: 900; letter-spacing: -0.02em; line-height: 1; margin-bottom: 8px; background: linear-gradient(180deg,#fff,#ff8855); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .setup .sub { font-size: 11px; letter-spacing: 0.3em; color: #506070; margin-bottom: 24px; }
+  .setup .card { padding: 20px; border: 1px solid rgba(255,102,51,0.2); background: rgba(255,102,51,0.03); margin-bottom: 16px; }
+  .setup .card h3 { font-size: 12px; letter-spacing: 0.2em; color: #ff8855; margin-bottom: 10px; }
+  .setup .card p { font-size: 12px; color: #a0a8b0; line-height: 1.7; margin-bottom: 8px; }
+  .setup .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 20px 0; }
+  .setup .mode { padding: 16px; border: 1px solid rgba(80,100,120,0.3); background: rgba(0,0,0,0.3); cursor: pointer; transition: all 0.2s; }
+  .setup .mode:hover { border-color: #ff6633; background: rgba(255,102,51,0.05); }
+  .setup .mode.selected { border-color: #ff6633; background: rgba(255,102,51,0.08); }
+  .setup .mode .name { font-size: 12px; color: #d4d8dc; font-weight: 700; letter-spacing: 0.15em; margin-bottom: 6px; }
+  .setup .mode .desc { font-size: 10px; color: #607080; line-height: 1.5; }
+  .setup .mode .time { font-size: 9px; color: #ff8855; letter-spacing: 0.2em; margin-top: 8px; }
+  .btn-primary { padding: 16px 40px; font-size: 13px; letter-spacing: 0.4em; font-family: inherit; font-weight: 900; background: linear-gradient(135deg,#ff4400,#ff8833); border: none; color: #000; cursor: pointer; box-shadow: 0 0 50px rgba(255,80,0,0.4); transition: all 0.2s; width: 100%; max-width: 400px; }
+  .btn-primary:hover { box-shadow: 0 0 80px rgba(255,80,0,0.6); }
+  .btn-test { padding: 12px 28px; font-size: 11px; letter-spacing: 0.2em; font-family: inherit; background: transparent; border: 1px solid rgba(95,184,255,0.4); color: #5fb8ff; cursor: pointer; margin-bottom: 16px; }
+  .btn-test:hover { background: rgba(95,184,255,0.08); }
+  .btn-secondary { padding: 12px 30px; font-size: 11px; letter-spacing: 0.3em; font-family: inherit; background: transparent; border: 1px solid rgba(255,102,51,0.4); color: #ff8855; cursor: pointer; }
+  .btn-secondary:hover { background: rgba(255,102,51,0.08); }
+  .test-result { padding: 14px 16px; margin-bottom: 16px; font-size: 12px; line-height: 1.6; border: 1px solid; word-break: break-word; }
+  .test-ok { border-color: rgba(95,255,175,0.4); background: rgba(95,255,175,0.05); color: #5fffaf; }
+  .test-warn { border-color: rgba(255,184,77,0.4); background: rgba(255,184,77,0.05); color: #ffb84d; }
+  .test-err { border-color: rgba(255,77,109,0.4); background: rgba(255,77,109,0.05); color: #ff4d6d; }
+  .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid; border-image: linear-gradient(90deg, transparent, #ff6633, transparent) 1; }
+  .header .title { font-size: clamp(22px, 4vw, 36px); font-weight: 900; letter-spacing: -0.02em; background: linear-gradient(180deg,#fff,#ff8855); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .header .meta { text-align: right; font-size: 10px; color: #506070; }
+  .header .clock { font-size: 12px; color: #d4d8dc; font-variant-numeric: tabular-nums; }
+  .status-bar { padding: 18px 22px; border: 1px solid rgba(255,102,51,0.4); background: linear-gradient(90deg, rgba(255,102,51,0.08), transparent); margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .status-bar .left { display: flex; align-items: center; gap: 14px; }
+  .pulse { width: 10px; height: 10px; border-radius: 50%; background: #ff4444; box-shadow: 0 0 12px #ff4444; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; transform: scale(1); } 50% { opacity:0.5; transform: scale(0.9); } }
+  .status-bar .label { font-size: 13px; letter-spacing: 0.2em; color: #ff8855; font-weight: 700; }
+  .status-bar .sublabel { font-size: 10px; color: #607080; margin-top: 2px; }
+  .status-bar .timer { font-size: 24px; color: #ff8855; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .agent-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .agent { padding: 14px 16px; border: 1px solid rgba(64,72,80,0.4); background: rgba(0,0,0,0.3); transition: all 0.3s; }
+  .agent.running { border-color: rgba(255,136,85,0.4); background: linear-gradient(90deg, rgba(255,136,85,0.1), rgba(0,0,0,0.3)); }
+  .agent.done { border-color: rgba(95,255,175,0.3); }
+  .agent.error { border-color: rgba(255,77,109,0.4); }
+  .agent-row { display: flex; justify-content: space-between; align-items: center; }
+  .agent .name { font-size: 10px; letter-spacing: 0.15em; font-weight: 700; }
+  .agent .state { font-size: 9px; color: #506070; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.2em; }
+  .agent.running .name { color: #ff8855; }
+  .agent.done .name { color: #5fffaf; }
+  .agent.error .name { color: #ff4d6d; }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .log { height: 240px; overflow-y: auto; padding: 14px 18px; border: 1px solid rgba(80,90,100,0.25); background: rgba(0,0,0,0.6); font-size: 11px; line-height: 1.85; }
+  .log .time { color: #303840; margin-right: 10px; }
+  .log .ok { color: #5fffaf; } .log .err { color: #ff4d6d; } .log .warn { color: #ff8855; } .log .start { color: #5fb8ff; } .log .info { color: #607080; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+  .blink { animation: blink 1s infinite; }
+  .results .signal-banner { padding: 28px 30px; margin-bottom: 24px; position: relative; overflow: hidden; }
+  .signal-banner .quality { position: absolute; top: 12px; right: 16px; font-size: 9px; letter-spacing: 0.3em; color: #506070; }
+  .signal-banner .signal-label { font-size: 10px; letter-spacing: 0.4em; color: #506070; margin-bottom: 8px; }
+  .signal-banner .signal-value { font-size: clamp(30px, 5vw, 52px); font-weight: 900; letter-spacing: 0.05em; line-height: 1; margin-bottom: 12px; }
+  .signal-banner .driver { font-size: 13px; color: #a0a8b0; line-height: 1.6; max-width: 700px; }
+  .signal-banner .levels { margin-top: 14px; display: flex; gap: 16px; flex-wrap: wrap; font-size: 10px; color: #506070; letter-spacing: 0.15em; }
+  .section-label { font-size: 9px; letter-spacing: 0.3em; color: #ff6633; margin-bottom: 12px; }
+  .grid-prices, .grid-forecasts, .grid-status, .grid-scenarios { display: grid; gap: 10px; margin-bottom: 22px; }
+  .grid-prices { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .grid-forecasts { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .grid-status { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  .grid-scenarios { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .price-card { padding: 16px 18px; }
+  .price-card .lbl { font-size: 9px; color: #506070; letter-spacing: 0.2em; margin-bottom: 8px; }
+  .price-card .val { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+  .forecast-card { padding: 18px; position: relative; }
+  .forecast-card.primary-card { border-width: 2px; }
+  .forecast-card .primary-tag { position: absolute; top: 0; right: 0; font-size: 8px; padding: 3px 10px; color: #000; letter-spacing: 0.2em; font-weight: 700; }
+  .forecast-card .day { font-size: 9px; color: #506070; letter-spacing: 0.25em; margin-bottom: 10px; }
+  .forecast-card .price { font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+  .forecast-card.primary-card .price { font-size: 32px; }
+  .forecast-card .range { font-size: 10px; color: #607080; margin-bottom: 8px; }
+  .forecast-card .conf-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .forecast-card .conf-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+  .forecast-card .conf-fill { height: 100%; }
+  .forecast-card .conf-text { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .forecast-card .catalyst { font-size: 10px; color: #7080a0; margin-top: 8px; padding-top: 10px; border-top: 1px solid rgba(80,100,120,0.2); line-height: 1.5; }
+  .status-card { padding: 12px 14px; text-align: center; }
+  .status-card .lbl { font-size: 8px; color: #506070; letter-spacing: 0.25em; margin-bottom: 6px; }
+  .status-card .val { font-size: 13px; font-weight: 800; letter-spacing: 0.05em; }
+  .scenario-card { padding: 16px; }
+  .scenario-card .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .scenario-card .name { font-size: 10px; letter-spacing: 0.25em; font-weight: 700; }
+  .scenario-card .prob { font-size: 12px; font-weight: 700; }
+  .scenario-card .target { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+  .scenario-card .trigger { font-size: 10px; color: #7080a0; line-height: 1.6; }
+  .scenario-card .trigger-label { color: #506070; }
+  .factors { border: 1px solid rgba(80,100,120,0.2); background: rgba(0,0,0,0.3); padding: 16px 20px; margin-bottom: 22px; }
+  .factor { display: grid; grid-template-columns: 24px 1fr auto auto; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid rgba(80,100,120,0.15); }
+  .factor:last-child { border-bottom: none; }
+  .factor .num { color: #304050; font-size: 10px; font-weight: 700; }
+  .factor .fname { font-size: 12px; color: #c4ccd4; font-weight: 700; margin-bottom: 3px; }
+  .factor .ev { font-size: 10px; color: #7080a0; line-height: 1.5; }
+  .factor .weight { font-size: 8px; padding: 3px 8px; border: 1px solid; letter-spacing: 0.15em; }
+  .factor .dir { font-size: 11px; font-weight: 700; padding-top: 2px; }
+  .watch { margin-bottom: 22px; padding: 18px 22px; border: 1px solid rgba(255,184,77,0.25); background: rgba(255,184,77,0.04); }
+  .watch-label { font-size: 9px; letter-spacing: 0.3em; color: #ffb84d; margin-bottom: 12px; }
+  .watch-item { display: flex; gap: 10px; font-size: 11px; color: #a0a8b0; line-height: 1.6; margin-bottom: 8px; }
+  .watch-item .diamond { color: #ffb84d; }
+  .meta-box { margin-bottom: 16px; padding: 16px 20px; }
+  .critique { border: 1px solid rgba(168,85,247,0.2); background: rgba(168,85,247,0.04); }
+  .critique-label { font-size: 9px; letter-spacing: 0.3em; color: #a855f7; margin-bottom: 10px; }
+  .critique p { font-size: 11px; color: #a0a0c0; line-height: 1.7; }
+  .gaps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .gaps-grid { grid-template-columns: 1fr; } }
+  .contradictions { padding: 14px 16px; border: 1px solid rgba(255,77,109,0.2); background: rgba(255,77,109,0.04); }
+  .contradictions-label { font-size: 9px; letter-spacing: 0.25em; color: #ff4d6d; margin-bottom: 8px; }
+  .contradictions div { font-size: 10px; color: #a08090; margin-bottom: 4px; line-height: 1.5; }
+  .data-gaps { padding: 14px 16px; border: 1px solid rgba(95,184,255,0.2); background: rgba(95,184,255,0.04); }
+  .data-gaps-label { font-size: 9px; letter-spacing: 0.25em; color: #5fb8ff; margin-bottom: 8px; }
+  .data-gaps div { font-size: 10px; color: #80a0c0; margin-bottom: 4px; line-height: 1.5; }
+  .swan { margin-bottom: 16px; padding: 14px 18px; border: 1px solid rgba(255,77,109,0.3); background: rgba(255,77,109,0.04); }
+  .swan-label { font-size: 9px; letter-spacing: 0.3em; color: #ff4d6d; margin-bottom: 8px; }
+  .swan p { font-size: 12px; color: #c0a0a8; line-height: 1.7; }
+  .summary { margin-bottom: 24px; padding: 22px 28px; border: 1px solid rgba(255,102,51,0.3); background: linear-gradient(135deg, rgba(255,102,51,0.06), transparent); }
+  .summary-label { font-size: 9px; letter-spacing: 0.3em; color: #ff6633; margin-bottom: 12px; }
+  .summary p { font-size: 14px; color: #c4ccd4; line-height: 1.85; }
+  .raw-feeds { margin-bottom: 24px; }
+  .raw-feeds-label { font-size: 9px; letter-spacing: 0.3em; color: #506070; margin-bottom: 12px; }
+  details { border: 1px solid rgba(80,100,120,0.2); background: rgba(0,0,0,0.4); margin-bottom: 6px; }
+  details summary { padding: 10px 14px; cursor: pointer; font-size: 11px; color: #7080a0; letter-spacing: 0.15em; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: '▸ '; color: #404850; }
+  details[open] summary::before { content: '▾ '; }
+  details summary .chars { font-size: 9px; color: #404850; }
+  details pre { padding: 14px; font-size: 10px; color: #6070a0; line-height: 1.7; white-space: pre-wrap; background: rgba(0,0,0,0.4); max-height: 300px; overflow-y: auto; font-family: inherit; }
+  .footer { text-align: center; padding: 20px 0; border-top: 1px solid rgba(80,100,120,0.15); }
+  .disclaimer { font-size: 10px; color: #304050; letter-spacing: 0.15em; margin-bottom: 16px; line-height: 1.8; }
+  .error-box { padding: 30px; border: 1px solid rgba(255,77,109,0.4); background: rgba(255,77,109,0.05); margin-bottom: 16px; }
+  .error-box .label { font-size: 14px; color: #ff4d6d; letter-spacing: 0.2em; margin-bottom: 14px; font-weight: 700; }
+  .error-box .msg { font-size: 12px; color: #aaa; margin-bottom: 20px; line-height: 1.7; word-break: break-word; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,102,51,0.3); border-radius: 2px; }
+  .hidden { display: none !important; }
+  .agent-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 24px 0; }
+  .agent-preview .ap { padding: 14px; border: 1px solid rgba(255,102,51,0.15); background: linear-gradient(135deg, rgba(255,102,51,0.04), rgba(0,0,0,0.3)); position: relative; overflow: hidden; }
+  .agent-preview .ap .tag { position: absolute; top: 0; left: 0; font-size: 8px; padding: 3px 8px; background: #ff6633; color: #000; letter-spacing: 0.15em; font-weight: 700; }
+  .agent-preview .ap .icon { font-size: 20px; margin-top: 16px; margin-bottom: 6px; }
+  .agent-preview .ap .nm { font-size: 11px; letter-spacing: 0.15em; color: #d4d8dc; font-weight: 700; margin-bottom: 4px; }
+  .agent-preview .ap .desc { font-size: 9px; color: #607080; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div id="setup-screen" class="setup">
+    <h1>OIL ORACLE</h1>
+    <div class="sub">v3.0 · REAL-TIME · ZERO-CACHE INTELLIGENCE</div>
+    <div class="card">
+      <h3>◢ HOW THIS WORKS</h3>
+      <p>Five specialist AI agents run live web searches in parallel — prices, war intel, fundamentals, sentiment, technicals — then synthesize into precision predictions with confidence ratings.</p>
+      <p>Every number sourced live. Nothing hardcoded. Refresh anytime for the latest.</p>
+    </div>
+    <div class="card">
+      <h3>◢ STEP 1 · TEST CONNECTION</h3>
+      <p>Click below to verify the backend and API key are working before running a full sweep.</p>
+      <button class="btn-test" id="test-btn">🔌 TEST CONNECTION</button>
+      <div id="test-result"></div>
+    </div>
+    <div class="card">
+      <h3>◢ STEP 2 · SELECT MODE</h3>
+      <div class="modes" id="mode-selector">
+        <div class="mode" data-mode="quick">
+          <div class="name">⚡ QUICK</div>
+          <div class="desc">Single comprehensive agent · faster · less detail</div>
+          <div class="time">~ 30-60 SEC</div>
+        </div>
+        <div class="mode selected" data-mode="full">
+          <div class="name">🛢️ FULL ORACLE</div>
+          <div class="desc">5 parallel specialist agents · deep intel · self-critique · recommended</div>
+          <div class="time">~ 60-120 SEC</div>
+        </div>
+      </div>
+    </div>
+    <div class="agent-preview" id="agents-preview"></div>
+    <div style="text-align: center; margin-top: 30px;">
+      <button class="btn-primary" id="launch-btn">⚡ EXECUTE LIVE SWEEP</button>
+      <div style="margin-top: 16px; font-size: 10px; color: #506070; letter-spacing: 0.2em;">REAL-TIME · LIVE WEB SEARCH · NO HARDCODED DATA</div>
+    </div>
+  </div>
+  <div id="run-screen" class="hidden">
+    <div class="header">
+      <div>
+        <div style="font-size: 10px; letter-spacing: 0.4em; color: #ff6633; margin-bottom: 6px; font-weight: 600;">◤ CLASSIFIED ◢ OPERATIONAL TIER III</div>
+        <div class="title">OIL ORACLE</div>
+        <div style="font-size: 10px; letter-spacing: 0.3em; color: #506070; margin-top: 4px;">v3.0 · LIVE SESSION</div>
+      </div>
+      <div class="meta">
+        <div style="font-size: 10px; letter-spacing: 0.2em; margin-bottom: 4px;">SYSTEM CLOCK</div>
+        <div class="clock" id="clock">—</div>
+      </div>
+    </div>
+    <div id="run-status"></div>
+    <div id="run-content"></div>
+  </div>
+</div>
+<script>
+const STAGES = [
+  { id: "prices", label: "LIVE PRICES", icon: "💲", short: "Live WTI, Brent, gas pump, DXY, VIX",
+    prompt: `Search the web RIGHT NOW for current prices: WTI crude, Brent crude, natural gas Henry Hub, US national average gasoline (AAA/EIA), USD index (DXY), VIX. Report EXACT numbers with source and timestamp. Search multiple times to verify.
+Output:
+WTI: $X.XX (source)
+BRENT: $X.XX (source)
+NATGAS: $X.XX (source)
+GAS_PUMP: $X.XX (source)
+DXY: XX.XX
+VIX: XX.XX
+NOTES: anomalies or breaking moves` },
+  { id: "geopolitics", label: "WAR & GEOPOLITICS", icon: "⚔️", short: "War, Trump, Hormuz, diplomacy",
+    prompt: `Search the web RIGHT NOW for the latest on: Middle East war / Iran / Strait of Hormuz status today; Russia/Ukraine oil news; Trump statements on oil/Iran (last 48h, Truth Social); Red Sea / Houthi attacks; sanctions changes; upcoming summits this week. Report SPECIFIC events with dates and sources.
+Output:
+TOP_EVENT: [most market-moving]
+HORMUZ_STATUS: [open/closed/% normal]
+TRUMP_LATEST: [recent statement + date]
+UPCOMING_THIS_WEEK: [list with dates]
+FLASHPOINTS: [list]
+IMPACT: BULLISH/BEARISH/MIXED + magnitude` },
+  { id: "fundamentals", label: "SUPPLY & DEMAND", icon: "⛽", short: "EIA, OPEC, rigs, tankers, China",
+    prompt: `Search the web RIGHT NOW for: latest EIA weekly petroleum report (crude/gasoline/distillate build or draw); OPEC+ latest production decision; Baker Hughes rig count; China & India oil imports; tanker rates (VLCC, Baltic Dirty); refinery utilization; production outages. Report SPECIFIC numbers.
+Output:
+EIA_CRUDE: [build/draw + Mbbl + week]
+EIA_GASOLINE: [build/draw]
+OPEC_PRODUCTION: [mb/d + quota changes]
+RIG_COUNT: [number + change]
+TANKER_RATES: [WS + $/day]
+CHINA_IMPORTS: [mb/d]
+DISRUPTIONS: [list]
+BALANCE: TIGHT/BALANCED/OVERSUPPLIED` },
+  { id: "sentiment", label: "MARKET POSITIONING", icon: "📊", short: "COT, Polymarket, analyst calls, retail",
+    prompt: `Search the web RIGHT NOW for: latest CFTC COT report for crude; hedge fund/managed money net longs WTI & Brent; options skew/put-call; Polymarket odds on oil events (Hormuz reopening, Iran peace); latest Goldman/JPM/Citi/Morgan Stanley oil forecasts; Reddit r/wallstreetbets/r/oil sentiment; USO/XLE ETF flows. Report SPECIFIC data.
+Output:
+COT_NET: [net long contracts + WoW change]
+COT_READ: [crowded long/short/neutral]
+POLYMARKET: [relevant odds]
+ANALYST_TARGETS: [banks + targets]
+RETAIL: [bullish/bearish]
+POSITIONING_RISK: [unwind trigger]` },
+  { id: "macro", label: "MACRO & TECHNICAL", icon: "📈", short: "Fed, CPI, DXY, support/resistance",
+    prompt: `Search the web RIGHT NOW for: Fed rate outlook (CME FedWatch); latest CPI + energy contribution; USD/DXY trend; China GDP/PMI; recession indicators; WTI technical support/resistance; 50-day & 200-day MAs; large options open interest strikes. Report SPECIFIC numbers.
+Output:
+FED: [next move + probability]
+CPI: [YoY% + MoM%]
+DXY: [level + 5-day move]
+CHINA: [signal]
+RECESSION_PROB: [%]
+TECHNICALS: [support, resistance, MAs]
+KEY_LEVELS: [most important]` }
+];
+
+const QUICK_PROMPT = `You are an elite oil market intelligence analyst. Use web search to gather comprehensive current data on: 1) Live WTI/Brent prices + US gas pump avg 2) Middle East war/Iran/Hormuz status 3) Latest EIA inventory 4) OPEC+ decisions 5) Trump oil/energy statements 6) USD/Fed/CPI 7) COT positioning 8) Polymarket oil odds 9) Goldman/JPM/Citi forecasts 10) Tanker rates 11) WTI technical levels 12) Breaking news. Search multiple times. Extract specific numbers, dates, sources.`;
+
+const PREDICTION_SYSTEM = `You are the world's top oil market quant, formerly head of Goldman's oil desk. You received live intelligence reports. Synthesize into a precision prediction.
+RULES: Use ONLY numbers from the reports. Mark missing data null. Identify contradictions. Account for crowded positioning. Today's date is in the user message — use it to identify "tomorrow".
+Respond with ONLY valid JSON. No markdown, no backticks.
+Schema:
+{"today_date":"","data_quality_score":"1-10","wti_current":"","brent_current":"","gas_pump_current":"","tomorrow_target":"$XX","tomorrow_range_low":"$XX","tomorrow_range_high":"$XX","tomorrow_direction":"UP|DOWN|SIDEWAYS","tomorrow_confidence_pct":60,"tomorrow_key_catalyst":"","thursday_target":"$XX","thursday_direction":"UP|DOWN|SIDEWAYS","thursday_confidence_pct":55,"friday_target":"$XX","friday_direction":"UP|DOWN|SIDEWAYS","friday_confidence_pct":60,"monday_target":"$XX","monday_direction":"UP|DOWN|SIDEWAYS","monday_confidence_pct":65,"week_end_gas_pump":"$X.XX","trade_signal":"STRONG BUY|BUY|HOLD|SELL|STRONG SELL","key_support":"$XX","key_resistance":"$XX","stop_loss_suggestion":"$XX","supply_status":"OVERSUPPLIED|BALANCED|TIGHT|VERY TIGHT","demand_status":"WEAK|NEUTRAL|STRONG","positioning_risk":"LOW|MEDIUM|HIGH|EXTREME","geopolitical_score":7,"primary_driver":"","bull_scenario":{"trigger":"","target":"$XX","probability":25},"base_scenario":{"trigger":"","target":"$XX","probability":50},"bear_scenario":{"trigger":"","target":"$XX","probability":25},"black_swan":"","self_critique":"","contradictions_found":[],"data_gaps":[],"key_factors":[{"factor":"","direction":"BULLISH|BEARISH|NEUTRAL","weight":"HIGH|MEDIUM|LOW","evidence":""}],"watch_list":[],"executive_summary":""}`;
+
+let state = { mode: "full", phase: "idle", logs: [], stageStatus: {}, stageData: {}, prediction: null, errMsg: "", elapsed: 0, startTime: null };
+
+const dirColor = (d) => d === "UP" ? "#5fffaf" : d === "DOWN" ? "#ff4d6d" : "#ffb84d";
+const dirSign = (d) => d === "UP" ? "▲" : d === "DOWN" ? "▼" : "→";
+const signalColor = (s) => !s ? "#888" : s.includes("BUY") ? "#5fffaf" : s.includes("SELL") ? "#ff4d6d" : "#ffb84d";
+const riskColor = (r) => ({ LOW: "#5fffaf", MEDIUM: "#ffb84d", HIGH: "#ff8855", EXTREME: "#ff4d6d" }[r] || "#888");
+const statusColor = (s) => { if (!s) return "#888"; if (s.includes("TIGHT") || s.includes("STRONG") || s.includes("EXTREME")) return "#ff8855"; if (s.includes("OVERSUPPLIED") || s.includes("WEAK")) return "#5fffaf"; return "#ffb84d"; };
+const escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+
+async function callClaude({ system, user, useSearch = false, maxTokens = 4000 }) {
+  const res = await fetch("/api/claude", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ system, user, useSearch, maxTokens }),
+  });
+  if (!res.ok) {
+    let errData;
+    try { errData = await res.json(); } catch { errData = { error: `HTTP ${res.status} (non-JSON response — function may not be deployed)` }; }
+    throw new Error((errData.error || "Unknown") + (errData.details ? `: ${errData.details}` : ""));
+  }
+  const data = await res.json();
+  return data.text || "";
+}
+
+async function testConnection() {
+  const el = document.getElementById("test-result");
+  el.className = "test-result test-warn";
+  el.textContent = "Testing connection to backend...";
+  try {
+    const res = await fetch("/api/claude", { method: "GET" });
+    if (!res.ok) {
+      el.className = "test-result test-err";
+      el.innerHTML = `❌ Got HTTP ${res.status}. The function isn't deployed correctly. Check that <b>api/claude.js</b> exists as a folder+file on GitHub.`;
+      return;
+    }
+    const data = await res.json();
+    if (data.apiKeyConfigured) {
+      el.className = "test-result test-ok";
+      el.innerHTML = `✅ ${escapeHtml(data.status)}<br>${escapeHtml(data.message)}<br><br>You're ready — pick a mode and hit Execute.`;
+    } else {
+      el.className = "test-result test-warn";
+      el.innerHTML = `⚠️ Backend is alive but API key is missing.<br>${escapeHtml(data.message)}`;
+    }
+  } catch (e) {
+    el.className = "test-result test-err";
+    el.innerHTML = `❌ Could not reach /api/claude — ${escapeHtml(e.message)}.<br>This usually means the function isn't deployed. Verify api/claude.js on GitHub.`;
+  }
+}
+
+function addLog(msg, type = "info") {
+  state.logs.push({ t: new Date().toLocaleTimeString("en-US", { hour12: false }), msg, type });
+  if (state.logs.length > 100) state.logs.shift();
+  renderRunning();
+}
+
+async function runStage(stage) {
+  state.stageStatus[stage.id] = "running";
+  addLog(`${stage.icon}  Deploying agent: ${stage.label}`, "scan");
+  try {
+    const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const text = await callClaude({
+      system: `You are a specialist intelligence analyst. Today is ${today}. Search the web aggressively for current data. Be specific with numbers and sources.`,
+      user: stage.prompt + `\n\nToday is ${today}.`,
+      useSearch: true, maxTokens: 3000,
+    });
+    state.stageData[stage.id] = text;
+    state.stageStatus[stage.id] = "done";
+    addLog(`✓ ${stage.label} — ${text.length} chars`, "ok");
+    return { stage: stage.id, text };
+  } catch (e) {
+    state.stageStatus[stage.id] = "error";
+    addLog(`⚠ ${stage.label} — ${e.message}`, "warn");
+    return { stage: stage.id, text: `[FETCH FAILED: ${e.message}]` };
+  }
+}
+
+async function run() {
+  state.phase = "running"; state.logs = []; state.stageData = {};
+  state.stageStatus = Object.fromEntries(STAGES.map(s => [s.id, "pending"]));
+  state.prediction = null; state.errMsg = ""; state.startTime = Date.now();
+  document.getElementById("setup-screen").classList.add("hidden");
+  document.getElementById("run-screen").classList.remove("hidden");
+  startTimer(); renderRunning();
+  try {
+    let briefing;
+    const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    if (state.mode === "quick") {
+      addLog("◢ QUICK MODE · unified research agent", "start");
+      state.stageStatus.quick = "running"; renderRunning();
+      const text = await callClaude({ system: `Elite oil analyst. Today is ${today}. Search aggressively. Specific numbers + sources.`, user: QUICK_PROMPT + `\n\nToday is ${today}.`, useSearch: true, maxTokens: 5000 });
+      state.stageData.quick = text; state.stageStatus.quick = "done";
+      addLog(`✓ Quick research complete — ${text.length} chars`, "ok");
+      briefing = `═══ OIL INTELLIGENCE ═══\n${text}`;
+    } else {
+      addLog("◢ INITIALIZING PIPELINE · 5 parallel agents", "start");
+      const results = await Promise.all(STAGES.map(s => runStage(s)));
+      briefing = results.map(r => { const st = STAGES.find(s => s.id === r.stage); return `═══ ${st.icon} ${st.label} ═══\n${r.text}`; }).join("\n\n");
+    }
+    state.phase = "synthesizing";
+    addLog("", "info"); addLog("◢ Synthesizing matrix...", "start"); addLog("◢ Running prediction model...", "scan"); renderRunning();
+    const raw = await callClaude({ system: PREDICTION_SYSTEM, user: `TODAY: ${today}\n\nLive intelligence reports:\n\n${briefing}`, useSearch: false, maxTokens: 4000 });
+    let jsonText = raw; const m = raw.match(/\{[\s\S]*\}/); if (m) jsonText = m[0];
+    jsonText = jsonText.replace(/```json|```/g, "").trim();
+    let parsed;
+    try { parsed = JSON.parse(jsonText); }
+    catch (e) {
+      addLog("⚠ JSON parse retry...", "warn");
+      const fixed = await callClaude({ system: "Fix into valid JSON. Output ONLY the JSON object.", user: jsonText, maxTokens: 4000 });
+      const fm = fixed.match(/\{[\s\S]*\}/); parsed = JSON.parse(fm ? fm[0] : fixed.replace(/```json|```/g, "").trim());
+    }
+    state.prediction = parsed; state.phase = "done";
+    addLog(`✓ PREDICTION COMPLETE — ${parsed.tomorrow_confidence_pct}% confidence`, "ok");
+    stopTimer(); renderResults();
+  } catch (e) {
+    state.errMsg = e.message || "Unknown error"; state.phase = "error";
+    addLog(`✗ FATAL: ${e.message}`, "error"); stopTimer(); renderError();
+  }
+}
+
+let timerInterval = null;
+function startTimer() { timerInterval = setInterval(() => { state.elapsed = Math.floor((Date.now() - state.startTime) / 1000); const t = document.getElementById("status-timer"); if (t) t.textContent = state.elapsed + "s"; }, 250); }
+function stopTimer() { clearInterval(timerInterval); }
+
+function renderRunning() {
+  if (state.phase === "done" || state.phase === "error") return;
+  const isQuick = state.mode === "quick";
+  const stagesToShow = isQuick ? [{ id: "quick", label: "UNIFIED RESEARCH", icon: "🔬" }] : STAGES;
+  const html = `
+    <div class="status-bar">
+      <div class="left"><div class="pulse"></div>
+        <div><div class="label">${state.phase === "synthesizing" ? "SYNTHESIZING MATRIX" : "GATHERING INTEL"}</div>
+        <div class="sublabel">Live web research · do not interrupt</div></div></div>
+      <div class="timer" id="status-timer">${state.elapsed}s</div>
+    </div>
+    <div class="agent-grid">
+      ${stagesToShow.map(s => { const st = state.stageStatus[s.id] || "pending";
+        return `<div class="agent ${st}"><div class="agent-row"><div><div class="name">${s.icon} ${s.label}</div><div class="state">${st}</div></div>
+        <div style="font-size:14px;">${st === "done" ? "✓" : st === "error" ? "✗" : st === "running" ? '<span class="spin">◌</span>' : "○"}</div></div></div>`; }).join("")}
+    </div>
+    <div class="log" id="log-box">
+      ${state.logs.map(l => `<div class="${l.type === "ok" ? "ok" : l.type === "error" ? "err" : l.type === "warn" ? "warn" : l.type === "start" ? "start" : "info"}"><span class="time">${l.t}</span>${escapeHtml(l.msg) || "&nbsp;"}</div>`).join("")}
+      <div style="color:#303840;">▎<span class="blink">_</span></div>
+    </div>`;
+  document.getElementById("run-status").innerHTML = html;
+  const lb = document.getElementById("log-box"); if (lb) lb.scrollTop = lb.scrollHeight;
+}
+
+function renderError() {
+  document.getElementById("run-status").innerHTML = "";
+  document.getElementById("run-content").innerHTML = `<div class="error-box"><div class="label">✗ PIPELINE FAILURE</div><div class="msg">${escapeHtml(state.errMsg)}</div>
+    <button class="btn-secondary" onclick="run()">↻ RETRY</button>
+    <button class="btn-secondary" onclick="resetToSetup()" style="margin-left:10px;">⚙ BACK</button></div>`;
+}
+
+function renderResults() {
+  const p = state.prediction; if (!p) return;
+  document.getElementById("run-status").innerHTML = "";
+  const sigC = signalColor(p.trade_signal);
+  const forecasts = [
+    { label: "TOMORROW", target: p.tomorrow_target, dir: p.tomorrow_direction, conf: p.tomorrow_confidence_pct, range: `${p.tomorrow_range_low} – ${p.tomorrow_range_high}`, catalyst: p.tomorrow_key_catalyst, big: true },
+    { label: "THURSDAY", target: p.thursday_target, dir: p.thursday_direction, conf: p.thursday_confidence_pct },
+    { label: "FRIDAY", target: p.friday_target, dir: p.friday_direction, conf: p.friday_confidence_pct },
+    { label: "MONDAY", target: p.monday_target, dir: p.monday_direction, conf: p.monday_confidence_pct },
+  ];
+  const prices = [
+    { label: "WTI CRUDE", value: p.wti_current, c: "#ffb84d" },
+    { label: "BRENT", value: p.brent_current, c: "#5fb8ff" },
+    { label: "US GAS PUMP", value: p.gas_pump_current, c: "#ff8855" },
+    { label: "WEEK-END GAS", value: p.week_end_gas_pump, c: dirColor(p.monday_direction) },
+  ];
+  const statuses = [
+    ["SUPPLY", p.supply_status, statusColor(p.supply_status)],
+    ["DEMAND", p.demand_status, statusColor(p.demand_status)],
+    ["POS RISK", p.positioning_risk, riskColor(p.positioning_risk)],
+    ["GEO RISK", `${p.geopolitical_score}/10`, p.geopolitical_score >= 7 ? "#ff4d6d" : p.geopolitical_score >= 5 ? "#ff8855" : "#5fffaf"],
+  ];
+  const scenarios = [
+    { name: "BEAR", data: p.bear_scenario, c: "#ff4d6d", icon: "▽" },
+    { name: "BASE", data: p.base_scenario, c: "#ffb84d", icon: "◇" },
+    { name: "BULL", data: p.bull_scenario, c: "#5fffaf", icon: "△" },
+  ];
+  const html = `<div class="results">
+    <div class="signal-banner" style="background:linear-gradient(135deg,${sigC}12,transparent 70%);border:2px solid ${sigC}40;">
+      <div class="quality">DATA QUALITY: ${escapeHtml(p.data_quality_score)}/10</div>
+      <div class="signal-label">AI TRADE SIGNAL</div>
+      <div class="signal-value" style="color:${sigC};">${escapeHtml(p.trade_signal)}</div>
+      <div class="driver">${escapeHtml(p.primary_driver)}</div>
+      <div class="levels"><span>SUPPORT <span style="color:#ff4d6d;">${escapeHtml(p.key_support)}</span></span>
+      <span>RESISTANCE <span style="color:#5fffaf;">${escapeHtml(p.key_resistance)}</span></span>
+      <span>STOP <span style="color:#ffb84d;">${escapeHtml(p.stop_loss_suggestion)}</span></span></div>
+    </div>
+    <div class="section-label">◤ LIVE MARKET</div>
+    <div class="grid-prices">${prices.map(pr => `<div class="price-card" style="border:1px solid ${pr.c}25;background:linear-gradient(145deg,${pr.c}08,transparent);"><div class="lbl">${pr.label}</div><div class="val" style="color:${pr.c};">${escapeHtml(pr.value || "—")}</div></div>`).join("")}</div>
+    <div class="section-label">◤ FORECAST CALENDAR</div>
+    <div class="grid-forecasts">${forecasts.map(f => { const c = dirColor(f.dir);
+      return `<div class="forecast-card ${f.big ? "primary-card" : ""}" style="border:${f.big ? 2 : 1}px solid ${c}${f.big ? 50 : 25};background:linear-gradient(135deg,${c}${f.big ? 10 : 6},transparent);">
+        ${f.big ? `<div class="primary-tag" style="background:${c};">PRIMARY</div>` : ""}
+        <div class="day">${f.label}</div><div class="price" style="color:${c};">${dirSign(f.dir)} ${escapeHtml(f.target)}</div>
+        ${f.range ? `<div class="range">Range: ${escapeHtml(f.range)}</div>` : ""}
+        <div class="conf-row"><div class="conf-bar"><div class="conf-fill" style="width:${f.conf}%;background:${c};box-shadow:0 0 8px ${c};"></div></div><span class="conf-text" style="color:${c};">${f.conf}%</span></div>
+        ${f.catalyst ? `<div class="catalyst">🎯 ${escapeHtml(f.catalyst)}</div>` : ""}</div>`; }).join("")}</div>
+    <div class="grid-status">${statuses.map(([l, v, c]) => `<div class="status-card" style="border:1px solid ${c}30;background:${c}06;"><div class="lbl">${l}</div><div class="val" style="color:${c};">${escapeHtml(v)}</div></div>`).join("")}</div>
+    <div class="section-label">◤ SCENARIO MATRIX</div>
+    <div class="grid-scenarios">${scenarios.map(s => `<div class="scenario-card" style="border:1px solid ${s.c}25;background:${s.c}06;"><div class="top"><span class="name" style="color:${s.c};">${s.icon} ${s.name}</span><span class="prob" style="color:${s.c};">${escapeHtml(s.data && s.data.probability)}%</span></div><div class="target" style="color:${s.c};">${escapeHtml(s.data && s.data.target)}</div><div class="trigger"><span class="trigger-label">TRIGGER:</span> ${escapeHtml(s.data && s.data.trigger)}</div></div>`).join("")}</div>
+    <div class="section-label" style="color:#5fb8ff;">◤ FACTOR ANALYSIS</div>
+    <div class="factors">${(p.key_factors || []).map((f, i) => { const dc = f.direction === "BULLISH" ? "#5fffaf" : f.direction === "BEARISH" ? "#ff4d6d" : "#ffb84d"; const wc = f.weight === "HIGH" ? "#ff6633" : f.weight === "MEDIUM" ? "#ffb84d" : "#506070";
+      return `<div class="factor"><span class="num">0${i + 1}</span><div><div class="fname">${escapeHtml(f.factor)}</div><div class="ev">${escapeHtml(f.evidence)}</div></div><span class="weight" style="color:${wc};border-color:${wc}40;">${escapeHtml(f.weight)}</span><span class="dir" style="color:${dc};">${f.direction === "BULLISH" ? "▲" : f.direction === "BEARISH" ? "▼" : "→"}</span></div>`; }).join("")}</div>
+    ${p.watch_list && p.watch_list.length ? `<div class="watch"><div class="watch-label">◤ WATCH LIST</div>${p.watch_list.map(w => `<div class="watch-item"><span class="diamond">◆</span><span>${escapeHtml(w)}</span></div>`).join("")}</div>` : ""}
+    ${p.self_critique ? `<div class="meta-box critique"><div class="critique-label">◤ SELF-CRITIQUE</div><p>${escapeHtml(p.self_critique)}</p></div>` : ""}
+    ${(p.contradictions_found && p.contradictions_found.length || p.data_gaps && p.data_gaps.length) ? `<div class="gaps-grid">
+      ${p.contradictions_found && p.contradictions_found.length ? `<div class="contradictions"><div class="contradictions-label">⚠ CONTRADICTIONS</div>${p.contradictions_found.map(c => `<div>• ${escapeHtml(c)}</div>`).join("")}</div>` : ""}
+      ${p.data_gaps && p.data_gaps.length ? `<div class="data-gaps"><div class="data-gaps-label">◌ DATA GAPS</div>${p.data_gaps.map(d => `<div>• ${escapeHtml(d)}</div>`).join("")}</div>` : ""}</div>` : ""}
+    <div class="swan"><div class="swan-label">⚠ BLACK SWAN</div><p>${escapeHtml(p.black_swan)}</p></div>
+    <div class="summary"><div class="summary-label">◤ EXECUTIVE SYNTHESIS</div><p>${escapeHtml(p.executive_summary)}</p></div>
+    <div class="raw-feeds"><div class="raw-feeds-label">◤ RAW INTELLIGENCE FEEDS</div>
+      ${Object.entries(state.stageData).map(([id, data]) => { const st = STAGES.find(s => s.id === id) || { icon: "🔬", label: "RESEARCH" }; return `<details><summary><span>${st.icon} ${st.label}</span><span class="chars">${data.length} chars</span></summary><pre>${escapeHtml(data)}</pre></details>`; }).join("")}</div>
+    <div class="footer"><div class="disclaimer">⚠ AI-GENERATED · NOT FINANCIAL ADVICE · ALL DATA SOURCED LIVE FROM WEB SEARCH<br>Markets move fast. Refresh frequently. Use proper risk management.</div>
+      <button class="btn-secondary" onclick="run()">↻ REFRESH INTELLIGENCE</button>
+      <button class="btn-secondary" onclick="resetToSetup()" style="margin-left:10px;">⚙ HOME</button></div>
+  </div>`;
+  document.getElementById("run-content").innerHTML = html;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function resetToSetup() {
+  state.phase = "idle"; state.prediction = null; state.logs = [];
+  document.getElementById("run-screen").classList.add("hidden");
+  document.getElementById("run-content").innerHTML = "";
+  document.getElementById("run-status").innerHTML = "";
+  document.getElementById("setup-screen").classList.remove("hidden");
+}
+
+function renderAgentsPreview() {
+  document.getElementById("agents-preview").innerHTML = STAGES.map((s, i) => `<div class="ap"><div class="tag">AGENT 0${i + 1}</div><div class="icon">${s.icon}</div><div class="nm">${s.label}</div><div class="desc">${s.short}</div></div>`).join("");
+}
+
+document.querySelectorAll(".mode").forEach(m => m.addEventListener("click", () => { document.querySelectorAll(".mode").forEach(x => x.classList.remove("selected")); m.classList.add("selected"); state.mode = m.dataset.mode; }));
+document.getElementById("launch-btn").addEventListener("click", run);
+document.getElementById("test-btn").addEventListener("click", testConnection);
+setInterval(() => { const c = document.getElementById("clock"); if (c) c.textContent = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }); }, 1000);
+renderAgentsPreview();
+</script>
+</body>
+</html>
