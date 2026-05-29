@@ -39,7 +39,7 @@ export default async function handler(req, res) {
     }
 
     const body = {
-      model: 'claude-opus-4-20250514',
+      model: 'claude-3-5-sonnet-latest',
       max_tokens: maxTokens,
       system: system || 'You are a helpful assistant.',
       messages: [{ role: 'user', content: user }],
