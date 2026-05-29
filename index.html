@@ -185,8 +185,8 @@
         </div>
         <div class="mode selected" data-mode="full">
           <div class="name">🛢️ FULL ORACLE</div>
-          <div class="desc">5 parallel specialist agents · deep intel · self-critique · recommended</div>
-          <div class="time">~ 60-120 SEC</div>
+          <div class="desc">5 sequential agents · deep intel · rate-limit safe · ~3 min</div>
+          <div class="time">~ 3-4 MIN</div>
         </div>
       </div>
     </div>
@@ -283,18 +283,30 @@ const statusColor = (s) => { if (!s) return "#888"; if (s.includes("TIGHT") || s
 const escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 
 async function callClaude({ system, user, useSearch = false, maxTokens = 4000 }) {
-  const res = await fetch("/api/claude", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ system, user, useSearch, maxTokens }),
-  });
-  if (!res.ok) {
+  const maxRetries = 4;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ system, user, useSearch, maxTokens }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.text || "";
+    }
     let errData;
     try { errData = await res.json(); } catch { errData = { error: `HTTP ${res.status} (non-JSON response — function may not be deployed)` }; }
-    throw new Error((errData.error || "Unknown") + (errData.details ? `: ${errData.details}` : ""));
+    const msg = (errData.error || "Unknown") + (errData.details ? `: ${errData.details}` : "");
+    // If rate limited, wait and retry automatically
+    const isRateLimit = res.status === 429 || msg.includes("429") || msg.includes("rate_limit");
+    if (isRateLimit && attempt < maxRetries) {
+      const waitSec = 30 + attempt * 20; // 30s, 50s, 70s, 90s
+      if (typeof addLog === "function") addLog(`⏳ Rate limit hit — waiting ${waitSec}s then retrying (attempt ${attempt + 1}/${maxRetries})...`, "warn");
+      await new Promise(r => setTimeout(r, waitSec * 1000));
+      continue;
+    }
+    throw new Error(msg);
   }
-  const data = await res.json();
-  return data.text || "";
 }
 
 async function testConnection() {
@@ -336,7 +348,7 @@ async function runStage(stage) {
     const text = await callClaude({
       system: `You are a specialist intelligence analyst. Today is ${today}. Search the web aggressively for current data. Be specific with numbers and sources.`,
       user: stage.prompt + `\n\nToday is ${today}.`,
-      useSearch: true, maxTokens: 3000,
+      useSearch: true, maxTokens: 2000,
     });
     state.stageData[stage.id] = text;
     state.stageStatus[stage.id] = "done";
@@ -362,17 +374,27 @@ async function run() {
     if (state.mode === "quick") {
       addLog("◢ QUICK MODE · unified research agent", "start");
       state.stageStatus.quick = "running"; renderRunning();
-      const text = await callClaude({ system: `Elite oil analyst. Today is ${today}. Search aggressively. Specific numbers + sources.`, user: QUICK_PROMPT + `\n\nToday is ${today}.`, useSearch: true, maxTokens: 5000 });
+      const text = await callClaude({ system: `Elite oil analyst. Today is ${today}. Search aggressively. Specific numbers + sources.`, user: QUICK_PROMPT + `\n\nToday is ${today}.`, useSearch: true, maxTokens: 3000 });
       state.stageData.quick = text; state.stageStatus.quick = "done";
       addLog(`✓ Quick research complete — ${text.length} chars`, "ok");
       briefing = `═══ OIL INTELLIGENCE ═══\n${text}`;
     } else {
-      addLog("◢ INITIALIZING PIPELINE · 5 parallel agents", "start");
-      const results = await Promise.all(STAGES.map(s => runStage(s)));
+      addLog("◢ INITIALIZING PIPELINE · 5 agents (sequential, rate-limit safe)", "start");
+      const results = [];
+      for (let i = 0; i < STAGES.length; i++) {
+        results.push(await runStage(STAGES[i]));
+        // Pause between agents to stay under per-minute token limits (Tier 1 = 30k/min)
+        if (i < STAGES.length - 1) {
+          addLog("⏳ Cooling down 20s to respect rate limit...", "info");
+          await new Promise(r => setTimeout(r, 20000));
+        }
+      }
       briefing = results.map(r => { const st = STAGES.find(s => s.id === r.stage); return `═══ ${st.icon} ${st.label} ═══\n${r.text}`; }).join("\n\n");
     }
     state.phase = "synthesizing";
-    addLog("", "info"); addLog("◢ Synthesizing matrix...", "start"); addLog("◢ Running prediction model...", "scan"); renderRunning();
+    addLog("", "info"); addLog("⏳ Cooling down before synthesis...", "info");
+    await new Promise(r => setTimeout(r, 20000));
+    addLog("◢ Synthesizing matrix...", "start"); addLog("◢ Running prediction model...", "scan"); renderRunning();
     const raw = await callClaude({ system: PREDICTION_SYSTEM, user: `TODAY: ${today}\n\nLive intelligence reports:\n\n${briefing}`, useSearch: false, maxTokens: 4000 });
     let jsonText = raw; const m = raw.match(/\{[\s\S]*\}/); if (m) jsonText = m[0];
     jsonText = jsonText.replace(/```json|```/g, "").trim();
